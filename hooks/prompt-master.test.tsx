@@ -1,3 +1,4 @@
+import type { CommandInfo } from 'claude-code'
 import { expect, test } from 'claude-code/testing'
 
 const BAND = {
@@ -90,4 +91,73 @@ test('an empty box rewrites nothing', async ($, on) => {
 
   expect(sent).toEqual([])
   expect(out.text).toContain('type a rough prompt')
+})
+
+const COMMANDS: CommandInfo[] = [
+  { name: 'compact', description: 'Built in', source: 'builtin' },
+  { name: 'trader-scan-market', description: 'Scan the market', source: 'plugin', plugin: 'trader-skill' },
+  { name: 'essay-outline', description: 'Outline an essay', source: 'user' },
+  { name: 'prompt-master', description: 'This mod', source: 'plugin', plugin: 'prompt-master' },
+  { name: 'github:pr', description: 'An MCP prompt', source: 'mcp' },
+]
+
+test('the Skills button lists installed skills and puts the chosen one in the box', async ($, on) => {
+  const box = { text: '' }
+  const sent: string[] = []
+  engine(on, box, sent)
+  on('command.list', () => ({ value: COMMANDS }))
+
+  for (const surface of SURFACES) {
+    box.text = 'draft about stocks'
+    const ui = await $.ui.mount({ ...BAND, surface })
+
+    await ui.press({ key: 'skills' })
+    // Only the person's own skills show: no built-ins, MCP prompts or this mod.
+    expect(await ui.find({ key: 'skill:essay-outline' })).toBeDefined()
+    expect(await ui.find({ key: 'skill:trader-scan-market' })).toBeDefined()
+    expect(await ui.find({ key: 'skill:compact' })).toBeUndefined()
+    expect(await ui.find({ key: 'skill:github:pr' })).toBeUndefined()
+    expect(await ui.find({ key: 'skill:prompt-master' })).toBeUndefined()
+
+    await ui.press({ key: 'skill:trader-scan-market' })
+    expect(box.text).toBe('/trader-scan-market draft about stocks')
+    // The picker closes, nothing was sent, and the buttons are back.
+    expect(sent).toEqual([])
+    expect(await ui.find({ key: 'prompt-master' })).toBeDefined()
+    await ui.unmount()
+  }
+})
+
+test('picking another skill swaps the command and keeps the text', async ($, on) => {
+  const box = { text: '/essay-outline my JFK essay' }
+  const sent: string[] = []
+  engine(on, box, sent)
+  on('command.list', () => ({ value: COMMANDS }))
+
+  const ui = await $.ui.mount({ ...BAND, surface: 'mobile' })
+  await ui.press({ key: 'skills' })
+  await ui.press({ key: 'skill:trader-scan-market' })
+  expect(box.text).toBe('/trader-scan-market my JFK essay')
+  await ui.unmount()
+})
+
+test('the picker pages through many skills', async ($, on) => {
+  const box = { text: '' }
+  engine(on, box, [])
+  const many: CommandInfo[] = Array.from({ length: 12 }, (_, i) => ({
+    name: `skill-${String(i).padStart(2, '0')}`,
+    description: 'A skill',
+    source: 'user' as const,
+  }))
+  on('command.list', () => ({ value: many }))
+
+  const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
+  await ui.press({ key: 'skills' })
+  expect(await ui.find({ key: 'skill:skill-00' })).toBeDefined()
+  expect(await ui.find({ key: 'skill:skill-11' })).toBeUndefined()
+  await ui.press({ key: 'more' })
+  expect(await ui.find({ key: 'skill:skill-11' })).toBeDefined()
+  await ui.press({ key: 'close' })
+  expect(await ui.find({ key: 'skills' })).toBeDefined()
+  await ui.unmount()
 })

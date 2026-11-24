@@ -26,6 +26,10 @@ In the desktop app, where `/plugin` does not run: click + next to the prompt box
 
 After a rewrite, **Undo** puts your original draft back and **Try again** asks for a fresh rewrite.
 
+## Skills button
+
+Next to Prompt Master is a **Skills** button. Press it to see the skills you have installed (from plugins and your own skills folders), with **More** and **Back** to page through a long list. Pick one and its command goes at the start of the box, keeping anything you already typed after it, for example `/essay-outline my JFK essay`. Edit it if you like, then send it yourself.
+
 ## What the rewrite does
 
 It keeps your intent and every fact you gave (names, numbers, dates, links, code), and adds what the prompt is missing: the goal, context, scope, level of detail, tone and the output format. It doesn't invent facts about you, doesn't answer the prompt, and keeps a short prompt short when that's all it needs.
