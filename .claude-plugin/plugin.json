@@ -1,7 +1,7 @@
 {
   "name": "prompt-master",
-  "version": "0.1.0",
-  "description": "Prompt Master: one click rewrites your rough draft into a clearer, stronger prompt in the box. You review and send it yourself.",
+  "version": "0.2.0",
+  "description": "Prompt Master: one click rewrites your rough draft into a clearer, stronger prompt, and a Skills button puts any installed skill in the box. You review and send it yourself.",
   "types": "./types/index.d.ts",
   "userConfig": {
     "model": {

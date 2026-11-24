@@ -10,8 +10,11 @@ export type Run = {
   note: string
 }
 
+/** The Skills picker: whether it is open and which page it shows. */
+export type Picker = { isOpen: boolean; page: number }
+
 declare module 'claude-code' {
   interface PluginState {
-    'prompt-master': { run: Shaped<Run> }
+    'prompt-master': { run: Shaped<Run>; picker: Picker }
   }
 }

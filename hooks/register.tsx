@@ -1,7 +1,7 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register } from 'claude-code'
 
-import type { Run } from '../types'
+import type { Picker, Run } from '../types'
 
 // Prompt Master: rewrites the rough draft in the prompt box into a clearer,
 // stronger prompt and puts it back in the box. It never sends anything: the
@@ -12,6 +12,27 @@ const IDLE: Run = { phase: 'idle', original: '', rewrite: '', note: '' }
 const run = atom({ plugin: 'prompt-master', key: 'run' } as const, IDLE, {
   shape: 'run-1',
 })
+
+const CLOSED: Picker = { isOpen: false, page: 0 }
+const picker = atom({ plugin: 'prompt-master', key: 'picker' } as const, CLOSED)
+
+// The skills the person has installed: commands that come from a plugin or
+// from their own skills folders, not Claude Code's built-ins or MCP prompts.
+async function listSkills($: EngineInterface) {
+  const all = await $.command.list()
+  return all
+    .filter(c => (c.source === 'plugin' || c.source === 'user') && c.name !== 'prompt-master')
+    .sort((a, b) => a.name.localeCompare(b.name))
+}
+
+// Puts `/skill` at the start of the box, keeping whatever was typed after it.
+async function useSkill($: EngineInterface, name: string) {
+  const box = await $.prompt.read()
+  const rest = box.text.replace(/^\/\S+\s*/, '').trim()
+  const text = rest ? `/${name} ${rest}` : `/${name} `
+  await $.prompt.fill({ text, mode: 'replace' })
+  await update($, picker, () => CLOSED)
+}
 
 const RULES = `You are Prompt Master. You rewrite a person's rough draft prompt into a clearer, more effective prompt that they will send to Claude. You return the rewritten prompt and nothing else.
 
@@ -202,8 +223,57 @@ export const register: Register = (on, options) => {
       )
     }
 
+    const pick = await read($, picker)
+
+    if (pick.isOpen) {
+      const skills = await listSkills($)
+      const size = Math.max(3, Math.min(8, e.props.maxRows - 3))
+      const pages = Math.max(1, Math.ceil(skills.length / size))
+      const page = Math.min(pick.page, pages - 1)
+      const shown = skills.slice(page * size, page * size + size)
+
+      return (
+        <Box flexDirection="column">
+          <Text dimColor>
+            {skills.length === 0
+              ? 'No skills installed yet.'
+              : `Your skills (${skills.length}): pick one to put it in the box${pages > 1 ? `, page ${page + 1} of ${pages}` : ''}`}
+          </Text>
+          {shown.map(skill => (
+            <Box key={`row:${skill.name}`} flexDirection="row" gap={1}>
+              <Button
+                key={`skill:${skill.name}`}
+                label={`/${skill.name}`}
+                onPress={() => useSkill($, skill.name)}
+              />
+              <Text dimColor wrap="truncate-end">
+                {skill.description}
+              </Text>
+            </Box>
+          ))}
+          <Box flexDirection="row" gap={1}>
+            {page > 0 && (
+              <Button
+                key="prev"
+                label="Back"
+                onPress={() => update($, picker, p => ({ ...p, page: page - 1 }))}
+              />
+            )}
+            {page < pages - 1 && (
+              <Button
+                key="more"
+                label="More"
+                onPress={() => update($, picker, p => ({ ...p, page: page + 1 }))}
+              />
+            )}
+            <Button key="close" label="Close" onPress={() => update($, picker, () => CLOSED)} />
+          </Box>
+        </Box>
+      )
+    }
+
     return (
-      <Box>
+      <Box flexDirection="row" gap={1}>
         <Button
           key="prompt-master"
           label="✦ Prompt Master"
@@ -211,6 +281,11 @@ export const register: Register = (on, options) => {
           onPress={async () => {
             await master($, model, (await $.prompt.read()).text)
           }}
+        />
+        <Button
+          key="skills"
+          label="Skills"
+          onPress={() => update($, picker, () => ({ isOpen: true, page: 0 }))}
         />
       </Box>
     )
