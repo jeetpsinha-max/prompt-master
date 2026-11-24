@@ -1,0 +1,23 @@
+{
+  "name": "prompt-master",
+  "version": "0.1.0",
+  "description": "Prompt Master: one click rewrites your rough draft into a clearer, stronger prompt in the box. You review and send it yourself.",
+  "types": "./types/index.d.ts",
+  "userConfig": {
+    "model": {
+      "type": "string",
+      "title": "Rewrite model",
+      "description": "Which Claude model rewrites your prompt",
+      "options": [
+        "sonnet",
+        "opus",
+        "haiku"
+      ],
+      "default": "sonnet"
+    }
+  },
+  "license": "MIT",
+  "author": {
+    "name": "Jeet Sinha"
+  }
+}
